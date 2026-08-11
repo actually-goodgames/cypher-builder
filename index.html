@@ -1,9 +1,9 @@
-                    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cypher Builder Studio</title>
+    <title>Cypher Builder Studio - Drag & Drop Shop</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
@@ -16,7 +16,7 @@
             overflow: hidden;
         }
         #sidebar {
-            width: 380px;
+            width: 400px;
             background-color: #050505;
             border-right: 2px solid #333333;
             padding: 20px;
@@ -31,9 +31,9 @@
             position: relative;
             background-color: #000000;
         }
-        h2 { font-size: 16px; margin: 0 0 10px 0; border-bottom: 1px solid #ffffff; padding-bottom: 5px; }
+        h2 { font-size: 15px; margin: 0 0 10px 0; border-bottom: 1px solid #ffffff; padding-bottom: 5px; }
         label { font-size: 11px; color: #aaaaaa; display: block; margin-bottom: 5px; }
-        select, input[type="text"], input[type="color"], input[type="range"], input[type="file"] {
+        input[type="text"], input[type="color"], input[type="range"], input[type="file"] {
             background-color: #000000;
             color: #ffffff;
             border: 1px solid #444444;
@@ -47,7 +47,7 @@
             background-color: #ffffff;
             color: #000000;
             border: none;
-            padding: 12px;
+            padding: 10px;
             font-family: 'Courier New', Courier, monospace;
             font-weight: bold;
             cursor: pointer;
@@ -55,6 +55,24 @@
             margin-top: 5px;
         }
         button:hover { background-color: #cccccc; }
+        .shop-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .shop-item {
+            background-color: #111111;
+            border: 1px solid #444444;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .shop-item:hover {
+            border-color: #ffffff;
+            background-color: #222222;
+        }
         textarea {
             background-color: #000000;
             color: #00ff00;
@@ -63,7 +81,7 @@
             font-family: 'Courier New', Courier, monospace;
             font-size: 11px;
             resize: none;
-            height: 70px;
+            height: 60px;
             width: 100%;
             box-sizing: border-box;
         }
@@ -73,55 +91,45 @@
 <body>
 
     <div id="sidebar">
-        <h2>CYPHER STUDIO WORKBENCH</h2>
+        <h2>DIGITAL SHOP & ASSET INVENTORY</h2>
+        <label>Click an asset to drop it into your workspace:</label>
+        
+        <div class="shop-grid">
+            <div class="shop-item" onclick="spawnAsset('box')">[+] 3D Cube</div>
+            <div class="shop-item" onclick="spawnAsset('sphere')">[+] 3D Sphere</div>
+            <div class="shop-item" onclick="spawnAsset('cylinder')">[+] 3D Cylinder</div>
+            <div class="shop-item" onclick="spawnAsset('torus')">[+] 3D Torus</div>
+        </div>
 
         <div class="section-box">
-            <label>AI BOT BUILDER ASSISTANT</label>
-            <input type="text" id="aiPrompt" placeholder="e.g., build a giant floating neon red moon...">
-            <button onclick="runAiBotBuild()">Generate with AI Prompt</button>
+            <h2>AI BUILDER ASSISTANT</h2>
+            <input type="text" id="aiPrompt" placeholder="e.g., build a giant blue sphere...">
+            <button onclick="runAiBuild()">Ask AI to Build</button>
         </div>
 
-        <div>
-            <label>Base Geometry Selection</label>
-            <select id="shapeSelect" onchange="updatePreview()">
-                <option value="box">3D Cube / Block</option>
-                <option value="sphere">3D Sphere / Globe</option>
-                <option value="cylinder">3D Cylinder / Pillar</option>
-                <option value="torus">3D Torus / Ring</option>
+        <div class="section-box">
+            <h2>SELECTED OBJECT PROPERTIES</h2>
+            <label>Scale / Size</label>
+            <input type="range" id="sizeRange" min="0.5" max="3.0" step="0.1" value="1.0" oninput="updateActiveProperties()">
+            
+            <label>Color Tint</label>
+            <input type="color" id="colorPicker" value="#ffffff" onchange="updateActiveProperties()">
+
+            <label>Physics Mode</label>
+            <select id="physicsSelect" style="background:#000; color:#fff; border:1px solid #44; padding:8px; width:100%; font-family:monospace;" onchange="updateActiveProperties()">
+                <option value="none">Static Anchor</option>
+                <option value="gravity">Active Gravity / Fall</option>
             </select>
+
+            <label>Upload Texture Image</label>
+            <input type="file" id="imageUpload" accept="image/*" onchange="loadTexture(event)">
         </div>
 
-        <div>
-            <label>Object Scale / Size</label>
-            <input type="range" id="sizeRange" min="0.5" max="3.0" step="0.1" value="1.0" oninput="updatePreview()">
-        </div>
+        <button onclick="publishToShop()" style="background-color: #00ff00; color: #000000;">PUBLISH TO VIRTUAL SHOP</button>
 
         <div>
-            <label>Base Material Color</label>
-            <input type="color" id="colorPicker" value="#ffffff" onchange="updatePreview()">
-        </div>
-
-        <div>
-            <label>Upload Custom Image Texture (PNG/JPG)</label>
-            <input type="file" id="imageUpload" accept="image/*" onchange="loadTextureImage(event)">
-        </div>
-
-        <div>
-            <label>Physics & Collision Engine</label>
-            <select id="physicsSelect">
-                <option value="none">Static (No Physics Forces)</option>
-                <option value="gravity">Dynamic Rigidbody (Gravity Active)</option>
-                <option value="bouncy">Elastic Soft-Body Bounce</option>
-            </select>
-        </div>
-
-        <hr style="border-color: #333333; width:100%; margin: 5px 0;">
-
-        <button onclick="generateExportCode()">COMPILE & GENERATE CODE</button>
-
-        <div>
-            <label>Master Export String Package:</label>
-            <textarea id="codeOutput" readonly placeholder="Click compile to generate your system bridge code..."></textarea>
+            <label>Master Export String (Copy to Cypher Engine):</label>
+            <textarea id="codeOutput" readonly placeholder="Publish to generate export code..."></textarea>
         </div>
     </div>
 
@@ -137,95 +145,119 @@
         workspace.appendChild(renderer.domElement);
 
         scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        camera.position.z = 5;
 
-        let currentMesh;
+        let sceneObjects = [];
+        let selectedObject = null;
         let uploadedTextureUrl = null;
-        camera.position.z = 4;
 
-        function updatePreview() {
-            if (currentMesh) scene.remove(currentMesh);
-
-            let shapeType = document.getElementById("shapeSelect").value;
-            let size = parseFloat(document.getElementById("sizeRange").value);
-            let colorHex = document.getElementById("colorPicker").value;
-
+        function spawnAsset(shapeType, customColor = "#ffffff", customSize = 1.0, physicsVal = "none") {
             let geometry;
-            if (shapeType === "sphere") geometry = new THREE.SphereGeometry(size, 32, 32);
-            else if (shapeType === "cylinder") geometry = new THREE.CylinderGeometry(size * 0.5, size * 0.5, size * 2, 32);
-            else if (shapeType === "torus") geometry = new THREE.TorusGeometry(size, 0.3, 16, 100);
-            else geometry = new THREE.BoxGeometry(size, size, size);
+            if (shapeType === "sphere") geometry = new THREE.SphereGeometry(customSize, 32, 32);
+            else if (shapeType === "cylinder") geometry = new THREE.CylinderGeometry(customSize * 0.5, customSize * 0.5, customSize * 2, 32);
+            else if (shapeType === "torus") geometry = new THREE.TorusGeometry(customSize, 0.3, 16, 100);
+            else geometry = new THREE.BoxGeometry(customSize, customSize, customSize);
 
-            let materialParams = { color: colorHex };
+            let materialParams = { color: customColor };
             if (uploadedTextureUrl) {
-                const loader = new THREE.TextureLoader();
-                materialParams.map = loader.load(uploadedTextureUrl);
+                materialParams.map = new THREE.TextureLoader().load(uploadedTextureUrl);
             }
 
             let material = new THREE.MeshStandardMaterial(materialParams);
-            currentMesh = new THREE.Mesh(geometry, material);
-            scene.add(currentMesh);
+            let mesh = new THREE.Mesh(geometry, material);
+
+            // Random spread offset in workspace
+            mesh.position.set((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 0);
+            
+            // Store properties data on the mesh object
+            mesh.userData = {
+                shape: shapeType,
+                size: customSize,
+                color: customColor,
+                physics: physicsVal
+            };
+
+            scene.add(mesh);
+            sceneObjects.push(mesh);
+            selectedObject = mesh; // Auto-select latest spawned item
         }
 
-        function loadTextureImage(event) {
+        function updateActiveProperties() {
+            if (!selectedObject) return;
+            selectedObject.userData.size = parseFloat(document.getElementById("sizeRange").value);
+            selectedObject.userData.color = document.getElementById("colorPicker").value;
+            selectedObject.userData.physics = document.getElementById("physicsSelect").value;
+            
+            selectedObject.material.color.set(selectedObject.userData.color);
+        }
+
+        function loadTexture(event) {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     uploadedTextureUrl = e.target.result;
-                    updatePreview();
+                    if (selectedObject) {
+                        selectedObject.material.map = new THREE.TextureLoader().load(uploadedTextureUrl);
+                        selectedObject.material.needsUpdate = true;
+                    }
                 };
                 reader.readAsDataURL(file);
             }
         }
 
-        function runAiBotBuild() {
+        function runAiBuild() {
             let prompt = document.getElementById("aiPrompt").value.toLowerCase();
             if (!prompt) return;
 
-            // Simulated AI parsing rules based on user prompt vocabulary
-            if (prompt.includes("sphere") || prompt.includes("ball") || prompt.includes("planet")) {
-                document.getElementById("shapeSelect").value = "sphere";
-            } else if (prompt.includes("ring") || prompt.includes("donut")) {
-                document.getElementById("shapeSelect").value = "torus";
-            } else if (prompt.includes("tower") || prompt.includes("pillar")) {
-                document.getElementById("shapeSelect").value = "cylinder";
-            } else {
-                document.getElementById("shapeSelect").value = "box";
-            }
+            let shape = "box";
+            let color = "#ffffff";
+            if (prompt.includes("sphere") || prompt.includes("ball")) shape = "sphere";
+            if (prompt.includes("ring") || prompt.includes("donut")) shape = "torus";
+            if (prompt.includes("cylinder") || prompt.includes("pillar")) shape = "cylinder";
 
-            if (prompt.includes("red")) document.getElementById("colorPicker").value = "#ff0000";
-            else if (prompt.includes("blue")) document.getElementById("colorPicker").value = "#0055ff";
-            else if (prompt.includes("green")) document.getElementById("colorPicker").value = "#00ff00";
+            if (prompt.includes("red")) color = "#ff0000";
+            if (prompt.includes("blue")) color = "#0055ff";
+            if (prompt.includes("green")) color = "#00ff00";
 
-            updatePreview();
-            alert(">> AI Bot successfully constructed your layout specifications!");
+            spawnAsset(shape, color, 1.2, "gravity");
+            alert(">> AI Bot successfully constructed and dropped item into your workspace!");
         }
 
-        updatePreview();
+        function publishToShop() {
+            if (sceneObjects.length === 0) {
+                alert(">> Workspace is empty! Drag or spawn items from the shop first.");
+                return;
+            }
+
+            // Package all scene items into a master dataset
+            let worldData = {
+                version: "2.0",
+                objects: sceneObjects.map(obj => ({
+                    shape: obj.userData.shape,
+                    size: obj.userData.size,
+                    color: obj.userData.color,
+                    physics: obj.userData.physics,
+                    position: { x: obj.position.x, y: obj.position.y, z: obj.position.z }
+                }))
+            };
+
+            let encodedString = btoa(JSON.stringify(worldData));
+            document.getElementById("codeOutput").value = encodedString;
+        }
+
+        // Spawn a default item on load
+        spawnAsset("box");
 
         function animate() {
             requestAnimationFrame(animate);
-            if (currentMesh) {
-                currentMesh.rotation.x += 0.008;
-                currentMesh.rotation.y += 0.012;
-            }
+            sceneObjects.forEach(obj => {
+                obj.rotation.x += 0.005;
+                obj.rotation.y += 0.008;
+            });
             renderer.render(scene, camera);
         }
         animate();
-
-        function generateExportCode() {
-            let dataPackage = {
-                shape: document.getElementById("shapeSelect").value,
-                size: parseFloat(document.getElementById("sizeRange").value),
-                color: document.getElementById("colorPicker").value,
-                physics: document.getElementById("physicsSelect").value,
-                textureImage: uploadedTextureUrl,
-                aiPrompt: document.getElementById("aiPrompt").value
-            };
-
-            let encoded = btoa(JSON.stringify(dataPackage));
-            document.getElementById("codeOutput").value = encoded;
-        }
     </script>
 </body>
 </html>
