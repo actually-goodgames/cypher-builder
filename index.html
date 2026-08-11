@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cypher Builder Studio</title>
+    <title>Cypher Engine</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
@@ -12,219 +12,224 @@
             font-family: 'Courier New', Courier, monospace;
             margin: 0;
             display: flex;
+            flex-direction: column;
             height: 100vh;
             overflow: hidden;
         }
-        #sidebar {
-            width: 380px;
+        #viewport {
+            display: none;
+            height: 35vh;
             background-color: #050505;
-            border-right: 2px solid #333333;
-            padding: 20px;
+            border-bottom: 2px solid #ffffff;
+            position: relative;
+        }
+        #terminal-container {
+            flex-grow: 1;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            padding: 20px;
             box-sizing: border-box;
-            overflow-y: auto;
-        }
-        #workspace {
-            flex-grow: 1;
-            position: relative;
             background-color: #000000;
         }
-        h2 { font-size: 16px; margin: 0 0 10px 0; border-bottom: 1px solid #ffffff; padding-bottom: 5px; }
-        label { font-size: 11px; color: #aaaaaa; display: block; margin-bottom: 5px; }
-        select, input[type="text"], input[type="color"], input[type="range"], input[type="file"] {
+        #output-screen {
+            flex-grow: 1;
+            background-color: #000000;
+            border: 1px solid #333333;
+            padding: 15px;
+            overflow-y: auto;
+            font-size: 14px;
+            color: #ffffff;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+            border-top: 1px solid #333333;
+            padding-top: 10px;
+        }
+        .prompt-symbol {
+            color: #ffffff;
+            font-weight: bold;
+            margin-right: 10px;
+            font-size: 16px;
+        }
+        #commandInput {
+            flex-grow: 1;
             background-color: #000000;
             color: #ffffff;
-            border: 1px solid #444444;
-            padding: 8px;
-            font-family: 'Courier New', Courier, monospace;
-            width: 100%;
-            box-sizing: border-box;
-            margin-bottom: 10px;
-        }
-        button {
-            background-color: #ffffff;
-            color: #000000;
             border: none;
-            padding: 12px;
+            outline: none;
             font-family: 'Courier New', Courier, monospace;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 5px;
+            font-size: 15px;
         }
-        button:hover { background-color: #cccccc; }
-        textarea {
-            background-color: #000000;
-            color: #00ff00;
-            border: 1px solid #333333;
-            padding: 8px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 11px;
-            resize: none;
-            height: 70px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        .section-box { border: 1px dashed #333333; padding: 10px; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
-    <div id="sidebar">
-        <h2>CYPHER STUDIO WORKBENCH</h2>
+    <div id="viewport">
+        <div id="canvas-target" style="width:100%; height:100%;"></div>
+    </div>
 
-        <div class="section-box">
-            <label>AI BOT BUILDER ASSISTANT</label>
-            <input type="text" id="aiPrompt" placeholder="e.g., build a giant floating neon red moon...">
-            <button onclick="runAiBotBuild()">Generate with AI Prompt</button>
-        </div>
-
-        <div>
-            <label>Base Geometry Selection</label>
-            <select id="shapeSelect" onchange="updatePreview()">
-                <option value="box">3D Cube / Block</option>
-                <option value="sphere">3D Sphere / Globe</option>
-                <option value="cylinder">3D Cylinder / Pillar</option>
-                <option value="torus">3D Torus / Ring</option>
-            </select>
-        </div>
-
-        <div>
-            <label>Object Scale / Size</label>
-            <input type="range" id="sizeRange" min="0.5" max="3.0" step="0.1" value="1.0" oninput="updatePreview()">
-        </div>
-
-        <div>
-            <label>Base Material Color</label>
-            <input type="color" id="colorPicker" value="#ffffff" onchange="updatePreview()">
-        </div>
-
-        <div>
-            <label>Upload Custom Image Texture (PNG/JPG)</label>
-            <input type="file" id="imageUpload" accept="image/*" onchange="loadTextureImage(event)">
-        </div>
-
-        <div>
-            <label>Physics & Collision Engine</label>
-            <select id="physicsSelect">
-                <option value="none">Static (No Physics Forces)</option>
-                <option value="gravity">Dynamic Rigidbody (Gravity Active)</option>
-                <option value="bouncy">Elastic Soft-Body Bounce</option>
-            </select>
-        </div>
-
-        <hr style="border-color: #333333; width:100%; margin: 5px 0;">
-
-        <button onclick="generateExportCode()">COMPILE & GENERATE CODE</button>
-
-        <div>
-            <label>Master Export String Package:</label>
-            <textarea id="codeOutput" readonly placeholder="Click compile to generate your system bridge code..."></textarea>
+    <div id="terminal-container">
+        <div id="output-screen">CYPHER ENGINE v2.0 [Minimalist B&W Mode]
+Type /help to view all available system commands and instruction manuals.</div>
+        
+        <div class="input-wrapper">
+            <span class="prompt-symbol">&gt;</span>
+            <input type="text" id="commandInput" placeholder="Enter command..." autofocus autocomplete="off">
         </div>
     </div>
 
-    <div id="workspace"></div>
-
     <script>
-        const workspace = document.getElementById("workspace");
+        const outputScreen = document.getElementById("output-screen");
+        const commandInput = document.getElementById("commandInput");
+        const viewport = document.getElementById("viewport");
+
+        // Three.js setup
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, workspace.clientWidth / workspace.clientHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / (window.innerHeight * 0.35), 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        
-        renderer.setSize(workspace.clientWidth, workspace.clientHeight);
-        workspace.appendChild(renderer.domElement);
+        renderer.setSize(window.innerWidth, window.innerHeight * 0.35);
+        document.getElementById("canvas-target").appendChild(renderer.domElement);
 
         scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-
-        let currentMesh;
-        let uploadedTextureUrl = null;
+        let activeMesh = null;
         camera.position.z = 4;
 
-        function updatePreview() {
-            if (currentMesh) scene.remove(currentMesh);
-
-            let shapeType = document.getElementById("shapeSelect").value;
-            let size = parseFloat(document.getElementById("sizeRange").value);
-            let colorHex = document.getElementById("colorPicker").value;
-
+        function renderCustomScene(data) {
+            if (activeMesh) scene.remove(activeMesh);
+            
             let geometry;
-            if (shapeType === "sphere") geometry = new THREE.SphereGeometry(size, 32, 32);
-            else if (shapeType === "cylinder") geometry = new THREE.CylinderGeometry(size * 0.5, size * 0.5, size * 2, 32);
-            else if (shapeType === "torus") geometry = new THREE.TorusGeometry(size, 0.3, 16, 100);
-            else geometry = new THREE.BoxGeometry(size, size, size);
+            if (data.shape === "sphere") geometry = new THREE.SphereGeometry(data.size || 1, 32, 32);
+            else if (data.shape === "cylinder") geometry = new THREE.CylinderGeometry(data.size || 0.5, data.size || 0.5, (data.size || 1) * 2, 32);
+            else if (data.shape === "torus") geometry = new THREE.TorusGeometry(data.size || 1, 0.4, 16, 100);
+            else geometry = new THREE.BoxGeometry(data.size || 1, data.size || 1, data.size || 1);
 
-            let materialParams = { color: colorHex };
-            if (uploadedTextureUrl) {
-                const loader = new THREE.TextureLoader();
-                materialParams.map = loader.load(uploadedTextureUrl);
+            let materialParams = { color: data.color || 0xffffff };
+            
+            if (data.textureImage) {
+                const textureLoader = new THREE.TextureLoader();
+                materialParams.map = textureLoader.load(data.textureImage);
             }
 
             let material = new THREE.MeshStandardMaterial(materialParams);
-            currentMesh = new THREE.Mesh(geometry, material);
-            scene.add(currentMesh);
+            activeMesh = new THREE.Mesh(geometry, material);
+            scene.add(activeMesh);
         }
 
-        function loadTextureImage(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    uploadedTextureUrl = e.target.result;
-                    updatePreview();
-                };
-                reader.readAsDataURL(file);
-            }
-        }
+        // Gameplay state & keyboard event listeners
+        const keysPressed = {};
+        window.addEventListener('keydown', (e) => { keysPressed[e.key.toLowerCase()] = true; });
+        window.addEventListener('keyup', (e) => { keysPressed[e.key.toLowerCase()] = false; });
 
-        function runAiBotBuild() {
-            let prompt = document.getElementById("aiPrompt").value.toLowerCase();
-            if (!prompt) return;
-
-            // Simulated AI parsing rules based on user prompt vocabulary
-            if (prompt.includes("sphere") || prompt.includes("ball") || prompt.includes("planet")) {
-                document.getElementById("shapeSelect").value = "sphere";
-            } else if (prompt.includes("ring") || prompt.includes("donut")) {
-                document.getElementById("shapeSelect").value = "torus";
-            } else if (prompt.includes("tower") || prompt.includes("pillar")) {
-                document.getElementById("shapeSelect").value = "cylinder";
-            } else {
-                document.getElementById("shapeSelect").value = "box";
-            }
-
-            if (prompt.includes("red")) document.getElementById("colorPicker").value = "#ff0000";
-            else if (prompt.includes("blue")) document.getElementById("colorPicker").value = "#0055ff";
-            else if (prompt.includes("green")) document.getElementById("colorPicker").value = "#00ff00";
-
-            updatePreview();
-            alert(">> AI Bot successfully constructed your layout specifications!");
-        }
-
-        updatePreview();
+        let gameModeActive = false;
 
         function animate() {
             requestAnimationFrame(animate);
-            if (currentMesh) {
-                currentMesh.rotation.x += 0.008;
-                currentMesh.rotation.y += 0.012;
+
+            if (activeMesh) {
+                if (gameModeActive) {
+                    if (keysPressed['arrowleft'] || keysPressed['a']) activeMesh.position.x -= 0.05;
+                    if (keysPressed['arrowright'] || keysPressed['d']) activeMesh.position.x += 0.05;
+                    if (keysPressed['arrowup'] || keysPressed['w']) activeMesh.position.z -= 0.05;
+                    if (keysPressed['arrowdown'] || keysPressed['s']) activeMesh.position.z += 0.05;
+                    
+                    if (activeMesh.position.y > 0) {
+                        activeMesh.position.y -= 0.02;
+                    }
+                } else {
+                    activeMesh.rotation.x += 0.01;
+                    activeMesh.rotation.y += 0.015;
+                }
             }
+
             renderer.render(scene, camera);
         }
         animate();
 
-        function generateExportCode() {
-            let dataPackage = {
-                shape: document.getElementById("shapeSelect").value,
-                size: parseFloat(document.getElementById("sizeRange").value),
-                color: document.getElementById("colorPicker").value,
-                physics: document.getElementById("physicsSelect").value,
-                textureImage: uploadedTextureUrl,
-                aiPrompt: document.getElementById("aiPrompt").value
-            };
+        commandInput.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                let cmd = commandInput.value.trim();
+                if (!cmd) return;
 
-            let encoded = btoa(JSON.stringify(dataPackage));
-            document.getElementById("codeOutput").value = encoded;
+                appendOutput(`\n> ${cmd}`);
+                let response = routeCommand(cmd);
+                appendOutput(response);
+
+                commandInput.value = "";
+                outputScreen.scrollTop = outputScreen.scrollHeight;
+            }
+        });
+
+        function appendOutput(text) {
+            outputScreen.innerText += text;
+        }
+
+        function routeCommand(cmd) {
+            if (cmd === "/help") {
+                return `
+--------------------------------------------------
+CYPHER ENGINE MASTER COMMAND DIRECTORY:
+--------------------------------------------------
+  /help               - Displays this comprehensive command manual.
+  /mode 3d            - Opens the top 3D viewport canvas window.
+  /mode 2d            - Switches system focus to grid environment.
+  /play               - Initializes interactive gameplay and physics runner.
+  /stop               - Exits play mode and returns to editor console.
+  /clear              - Clears the active text display terminal screen.
+  /status             - Displays core diagnostic data and memory loads.
+  /insert [string]    - Imports a packed world string generated from 
+                        the Cypher Builder Studio website.
+--------------------------------------------------`;
+            }
+            if (cmd === "/clear") {
+                outputScreen.innerText = "";
+                return "";
+            }
+            if (cmd === "/status") {
+                return "\n[SYSTEM STATUS] Engine: Online | Theme: Monolith B&W | Memory: Optimal | Physics: Active";
+            }
+            if (cmd === "/mode 3d") {
+                viewport.style.display = "block";
+                return "\n>> 3D Viewport activated successfully at top.";
+            }
+            if (cmd === "/mode 2d") {
+                viewport.style.display = "none";
+                gameModeActive = false;
+                return "\n>> Switched to 2D Terminal Grid layout mode.";
+            }
+            if (cmd === "/play") {
+                if (!activeMesh) {
+                    return "\n>> [ERROR] No asset found in viewport. Use /insert [string] first!";
+                }
+                gameModeActive = true;
+                return `
+--------------------------------------------------
+PLAY ENGINE RUNNER: INITIALIZED
+--------------------------------------------------
+  Status: Live Gameplay Active
+  Controls: Use Arrow Keys / WASD to move your asset.
+  Type /stop to exit play mode and return to console.
+--------------------------------------------------`;
+            }
+            if (cmd === "/stop") {
+                gameModeActive = false;
+                return "\n>> Play engine deactivated. Returned to command terminal.";
+            }
+            if (cmd.startsWith("/insert ")) {
+                let codeString = cmd.substring(8).trim();
+                try {
+                    let decoded = JSON.parse(atob(codeString));
+                    viewport.style.display = "block";
+                    renderCustomScene(decoded);
+                    return `\n>> Successfully imported project asset! Shape: [${decoded.shape}], Physics: [${decoded.physics}], AI Logic: [${decoded.aiPrompt || 'None'}].`;
+                } catch (e) {
+                    return "\n>> [ERROR] Invalid import string formatting. Check your builder export code.";
+                }
+            }
+            return `\n>> Unknown execution string: "${cmd}". Type /help for valid syntax.`;
         }
     </script>
 </body>
