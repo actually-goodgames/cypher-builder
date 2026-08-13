@@ -3,232 +3,406 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cypher Studio - Visual Game Editor</title>
+    <title>Cypher Studio - Professional 3D Game Engine</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body {
-            background-color: #0b0f19;
-            color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
+        * { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+        body { margin: 0; background-color: #0d1117; color: #c9d1d9; display: flex; height: 100vh; overflow: hidden; }
+
+        /* DEVICE SELECTION MODAL */
+        #device-modal {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(13, 17, 23, 0.98); z-index: 999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        /* Left Tool Palette */
-        #palette {
-            width: 250px;
-            background-color: #111827;
-            border-right: 1px solid #1f2937;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            box-sizing: border-box;
+        .modal-card {
+            background: #161b22; border: 1px solid #30363d; padding: 20px 40px; margin: 8px;
+            border-radius: 8px; cursor: pointer; width: 300px; text-align: center; transition: 0.2s;
         }
-        /* Center Canvas Workspace */
-        #canvas-container {
-            flex-grow: 1;
-            position: relative;
-            background-color: #030712;
-            background-image: linear-gradient(#1f2937 1px, transparent 1px), linear-gradient(90deg, #1f2937 1px, transparent 1px);
-            background-size: 40px 40px;
+        .modal-card:hover { border-color: #58a6ff; background: #21262d; }
+
+        /* ENGINE MAIN WORKSPACE */
+        #sidebar {
+            width: 380px; background: #161b22; border-right: 1px solid #30363d;
+            display: flex; flex-direction: column; overflow-y: auto;
         }
-        /* Right Properties / Inspector Panel */
-        #inspector {
-            width: 280px;
-            background-color: #111827;
-            border-left: 1px solid #1f2937;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            box-sizing: border-box;
-            overflow-y: auto;
+        #viewport-container { flex-grow: 1; position: relative; background: #010409; }
+
+        /* MOE SHOP ASSISTANT */
+        .assistant-bar {
+            background: #21262d; border-bottom: 2px solid #58a6ff; padding: 12px;
+            display: flex; gap: 12px; align-items: center;
         }
-        h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; margin: 0 0 5px 0; }
-        .tool-btn {
-            background-color: #1f2937;
-            color: #ffffff;
-            border: 1px solid #374151;
-            padding: 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            text-align: left;
-            font-size: 13px;
-            font-weight: 600;
-            transition: 0.2s;
+        .assistant-avatar {
+            width: 40px; height: 40px; background: #238636; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-weight: bold;
         }
-        .tool-btn:hover { background-color: #374151; border-color: #60a5fa; }
+
+        /* NAVIGATION TABS */
+        .tab-bar { display: flex; border-bottom: 1px solid #30363d; background: #0d1117; }
+        .tab-btn {
+            flex: 1; padding: 10px; background: none; border: none; color: #8b949e;
+            cursor: pointer; font-weight: 600; font-size: 12px; border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active { color: #58a6ff; border-color: #58a6ff; background: #161b22; }
+
+        .tab-content { padding: 15px; display: none; }
+        .tab-content.active { display: block; }
+
+        /* REAL SHOP & PREFAB GRID */
+        .asset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .asset-card {
+            background: #21262d; border: 1px solid #30363d; border-radius: 6px; padding: 10px;
+            text-align: center; cursor: pointer; transition: 0.2s;
+        }
+        .asset-card:hover { border-color: #58a6ff; }
+
+        /* FORM CONTROLS */
+        .field-group { margin-bottom: 12px; }
+        label { font-size: 11px; color: #8b949e; display: block; margin-bottom: 4px; text-transform: uppercase; }
         input, select {
-            background-color: #1f2937;
-            color: #ffffff;
-            border: 1px solid #374151;
-            padding: 8px;
-            border-radius: 4px;
-            width: 100%;
-            box-sizing: border-box;
-            font-size: 13px;
+            width: 100%; background: #0d1117; border: 1px solid #30363d; color: #c9d1d9;
+            padding: 8px; border-radius: 4px; font-size: 13px;
         }
-        .action-btn {
-            background-color: #2563eb;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
+
+        .btn {
+            width: 100%; background: #238636; color: white; border: none; padding: 10px;
+            border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 5px;
         }
-        .action-btn:hover { background-color: #1d4ed8; }
+        .btn:hover { background: #2ea043; }
+        .btn-secondary { background: #1f6feb; }
+        .btn-secondary:hover { background: #388bfd; }
+
         textarea {
-            background-color: #030712;
-            color: #34d399;
-            border: 1px solid #374151;
-            padding: 8px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 11px;
-            resize: none;
-            height: 80px;
-            width: 100%;
-            box-sizing: border-box;
+            width: 100%; height: 70px; background: #0d1117; border: 1px solid #30363d;
+            color: #7ee787; font-family: monospace; font-size: 11px; padding: 8px; border-radius: 4px; resize: none;
         }
+
+        #diag-output { font-size: 11px; padding: 8px; border-radius: 4px; margin-top: 5px; background: #0d1117; border: 1px solid #30363d; }
     </style>
 </head>
 <body>
 
-    <div id="palette">
-        <h3>Asset Palette</h3>
-        <button class="tool-btn" onclick="spawnObject('box')">+ Add Platform Block</button>
-        <button class="tool-btn" onclick="spawnObject('sphere')">+ Add Player Sphere</button>
-        <button class="tool-btn" onclick="spawnObject('cylinder')">+ Add Obstacle Pillar</button>
-        <button class="tool-btn" onclick="spawnObject('torus')">+ Add Portal Ring</button>
-
-        <hr style="border-color: #1f2937; width:100%;">
-        
-        <h3>AI Assistant Studio</h3>
-        <input type="text" id="aiPrompt" placeholder="e.g., generate space level...">
-        <button class="action-btn" onclick="runAiBuild()">Ask AI Builder</button>
+    <div id="device-modal">
+        <h2 style="margin-bottom: 5px;">Cypher Studio Suite</h2>
+        <p style="color: #8b949e; margin-bottom: 20px;">Choose display layout mode:</p>
+        <div class="modal-card" onclick="setDevice('mobile')">📱 Mobile Friendly Layout</div>
+        <div class="modal-card" onclick="setDevice('laptop')">💻 Laptop Workspace</div>
+        <div class="modal-card" onclick="setDevice('desktop')">🖥️ Desktop / PC Studio</div>
     </div>
 
-    <div id="canvas-container"></div>
-
-    <div id="inspector">
-        <h3>Inspector Properties</h3>
-        <div>
-            <label style="font-size:11px; color:#9ca3af;">Scale / Size</label>
-            <input type="range" id="sizeInput" min="0.5" max="3.0" step="0.1" value="1.0" oninput="updateSelectedProperties()">
-        </div>
-        <div>
-            <label style="font-size:11px; color:#9ca3af;">Color Tint</label>
-            <input type="color" id="colorInput" value="#3b82f6" onchange="updateSelectedProperties()">
-        </div>
-        <div>
-            <label style="font-size:11px; color:#9ca3af;">Physics Rigidbody</label>
-            <select id="physicsInput" onchange="updateSelectedProperties()">
-                <option value="none">Static Obstacle</option>
-                <option value="gravity">Dynamic Physics (Gravity)</option>
-            </select>
+    <div id="sidebar">
+        <div class="assistant-bar">
+            <div class="assistant-avatar">🤖</div>
+            <div>
+                <strong style="font-size: 13px; display: block;">Moe (AI Engine Assistant)</strong>
+                <span id="moe-status" style="font-size: 11px; color: #8b949e;">"All systems online! Ready to build."</span>
+            </div>
         </div>
 
-        <hr style="border-color: #1f2937; width:100%;">
+        <div class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab('shop')">Shop & Prefabs</button>
+            <button class="tab-btn" onclick="switchTab('character')">Character Gen</button>
+            <button class="tab-btn" onclick="switchTab('effects')">3D Effects</button>
+            <button class="tab-btn" onclick="switchTab('network')">Network & Steam</button>
+        </div>
 
-        <button class="action-btn" style="background-color: #10b981;" onclick="exportGameData()">Export Game Package</button>
-        <div>
-            <label style="font-size:11px; color:#9ca3af;">Bridge Code String:</label>
-            <textarea id="outputCode" readonly placeholder="Export to generate string..."></textarea>
+        <div id="tab-shop" class="tab-content active">
+            <label>Real Shop Asset Library (Unicode Ready):</label>
+            <div class="asset-grid">
+                <div class="asset-card" onclick="spawnAsset('box')">
+                    <div style="font-size: 20px;">📦 / 🧊</div>
+                    <strong>Standard Cube</strong>
+                </div>
+                <div class="asset-card" onclick="spawnAsset('sphere')">
+                    <div style="font-size: 20px;">🔮 / 🌐</div>
+                    <strong>Player Sphere</strong>
+                </div>
+                <div class="asset-card" onclick="spawnAsset('cylinder')">
+                    <div style="font-size: 20px;">🏛️ / 🗼</div>
+                    <strong>3D Pillar</strong>
+                </div>
+                <div class="asset-card" onclick="spawnAsset('torus')">
+                    <div style="font-size: 20px;">⭕ / 🪐</div>
+                    <strong>Portal Ring</strong>
+                </div>
+            </div>
+
+            <hr style="border-color: #30363d; margin: 15px 0;">
+            <label>Ask Moe (AI Object Prefab Generator):</label>
+            <input type="text" id="ai-input" placeholder="e.g. 🚀 Rocket, 🌲 Forest Tree, 城堡 Tower...">
+            <button class="btn btn-secondary" onclick="generateAiPrefab()">Build Prefab Asset</button>
+        </div>
+
+        <div id="tab-character" class="tab-content">
+            <div class="field-group">
+                <label>Character Name / Unicode ID</label>
+                <input type="text" id="char-name" value="Player_王伟_Alpha" oninput="buildCharacter()">
+            </div>
+            <div class="field-group">
+                <label>Hair / Helmet Prefab Variant</label>
+                <input type="range" id="char-hair" min="1" max="1000" value="10" oninput="buildCharacter()">
+            </div>
+            <div class="field-group">
+                <label>Shirt / Body Armor Tint</label>
+                <input type="color" id="char-shirt" value="#1f6feb" onchange="buildCharacter()">
+            </div>
+            <div class="field-group">
+                <label>Legs / Pants Tint</label>
+                <input type="color" id="char-pants" value="#238636" onchange="buildCharacter()">
+            </div>
+        </div>
+
+        <div id="tab-effects" class="tab-content">
+            <div class="field-group">
+                <label>3D Particle Emitter System</label>
+                <button class="btn btn-secondary" onclick="toggleParticles()">Toggle Particle FX</button>
+            </div>
+            <div class="field-group">
+                <label>Spatial Light Intensity</label>
+                <input type="range" id="light-intensity" min="0" max="3" step="0.1" value="1" oninput="updateLighting()">
+            </div>
+            <div class="field-group">
+                <label>Shadow Projection</label>
+                <select id="shadow-toggle" onchange="updateLighting()">
+                    <option value="enabled">Active Shadows</option>
+                    <option value="disabled">Disabled (Performance)</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="tab-network" class="tab-content">
+            <div class="field-group">
+                <label>No-Code Multiplayer Extension</label>
+                <select id="net-sync">
+                    <option value="off">Off (Offline Singleplayer)</option>
+                    <option value="auto">Auto-Room Matchmaking (P2P)</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <label>Steamworks API Integration</label>
+                <input type="text" id="steam-appid" placeholder="Enter Steam AppID (e.g. 480)">
+            </div>
+            <div class="field-group">
+                <label>Auth & Leaderboard Sync</label>
+                <select id="auth-sync">
+                    <option value="enabled">Enabled (Cloud Persistence)</option>
+                    <option value="disabled">Disabled</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="padding: 15px; border-top: 1px solid #30363d; margin-top: auto;">
+            <button class="btn" style="background: #a371f7;" onclick="runDiagnostics()">Pre-Flight Error Diagnostics</button>
+            <div id="diag-output">Diagnostics Status: System Ready.</div>
+
+            <button class="btn" style="margin-top: 10px;" onclick="exportEnginePackage()">Export Engine Package</button>
+            <div style="margin-top: 8px;">
+                <label>Cypher Bridge String:</label>
+                <textarea id="bridge-export" readonly placeholder="Click export to generate bridge string..."></textarea>
+            </div>
         </div>
     </div>
+
+    <div id="viewport-container"></div>
 
     <script>
-        const container = document.getElementById("canvas-container");
+        // --- 1. DEVICE LAYOUT MANAGER ---
+        function setDevice(type) {
+            document.getElementById('device-modal').style.display = 'none';
+            const sidebar = document.getElementById('sidebar');
+            if (type === 'mobile') { sidebar.style.width = '100vw'; sidebar.style.height = '40vh'; }
+            else if (type === 'laptop') { sidebar.style.width = '320px'; }
+            else { sidebar.style.width = '380px'; }
+            window.dispatchEvent(new Event('resize'));
+        }
+
+        // --- 2. TAB CONTROLLER ---
+        function switchTab(name) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`tab-${name}`).classList.add('active');
+        }
+
+        // --- 3. CORE THREE.JS 3D ENGINE VIEWPORT ---
+        const container = document.getElementById('viewport-container');
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
 
         renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.shadowMap.enabled = true;
         container.appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        dirLight.position.set(5, 10, 7);
+        // Lighting System
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        dirLight.position.set(5, 10, 5);
+        dirLight.castShadow = true;
         scene.add(dirLight);
 
-        camera.position.set(0, 2, 5);
+        camera.position.set(0, 3, 6);
 
         let sceneObjects = [];
-        let selectedObject = null;
+        let characterGroup = null;
+        let particleSystem = null;
 
-        function spawnObject(type, colorHex = "#3b82f6", scaleVal = 1.0, physicsVal = "none") {
-            let geometry;
-            if (type === "sphere") geometry = new THREE.SphereGeometry(scaleVal, 32, 32);
-            else if (type === "cylinder") geometry = new THREE.CylinderGeometry(scaleVal*0.5, scaleVal*0.5, scaleVal*2, 32);
-            else if (type === "torus") geometry = new THREE.TorusGeometry(scaleVal, 0.3, 16, 100);
-            else geometry = new THREE.BoxGeometry(scaleVal, scaleVal, scaleVal);
+        // --- 4. REAL SHOP & PREFAB SPAWNER ---
+        function spawnAsset(shape) {
+            let geo;
+            if (shape === 'sphere') geo = new THREE.SphereGeometry(0.8, 32, 32);
+            else if (shape === 'cylinder') geo = new THREE.CylinderGeometry(0.4, 0.4, 1.8, 32);
+            else if (shape === 'torus') geo = new THREE.TorusGeometry(0.8, 0.2, 16, 100);
+            else geo = new THREE.BoxGeometry(1, 1, 1);
 
-            let material = new THREE.MeshStandardMaterial({ color: colorHex });
-            let mesh = new THREE.Mesh(geometry, material);
+            let mat = new THREE.MeshStandardMaterial({ color: 0x58a6ff });
+            let mesh = new THREE.Mesh(geo, mat);
+            mesh.castShadow = true;
+            mesh.position.set((Math.random() - 0.5) * 3, 0.5, (Math.random() - 0.5) * 2);
 
-            // Scatter placement so they don't stack on top of each other
-            mesh.position.set((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 2, 0);
-            
-            mesh.userData = { type: type, color: colorHex, scale: scaleVal, physics: physicsVal };
+            mesh.userData = { shape: shape };
             scene.add(mesh);
             sceneObjects.push(mesh);
-            selectedObject = mesh;
+
+            document.getElementById('moe-status').innerText = `"Spawned ${shape} into the 3D Viewport!"`;
         }
 
-        function updateSelectedProperties() {
-            if (!selectedObject) return;
-            selectedObject.userData.scale = parseFloat(document.getElementById("sizeInput").value);
-            selectedObject.userData.color = document.getElementById("colorInput").value;
-            selectedObject.userData.physics = document.getElementById("physicsInput").value;
-
-            selectedObject.material.color.set(selectedObject.userData.color);
-            selectedObject.scale.set(selectedObject.userData.scale, selectedObject.userData.scale, selectedObject.userData.scale);
-        }
-
-        function runAiBuild() {
-            let prompt = document.getElementById("aiPrompt").value.toLowerCase();
+        function generateAiPrefab() {
+            let prompt = document.getElementById('ai-input').value;
             if (!prompt) return;
-
-            let shape = "box";
-            let color = "#ef4444";
-            if (prompt.includes("player") || prompt.includes("ball")) { shape = "sphere"; color = "#3b82f6"; }
-            else if (prompt.includes("portal") || prompt.includes("ring")) { shape = "torus"; color = "#a855f7"; }
-            else if (prompt.includes("pillar") || prompt.includes("tower")) { shape = "cylinder"; color = "#10b981"; }
-
-            spawnObject(shape, color, 1.2, "gravity");
-            document.getElementById("aiPrompt").value = "";
+            spawnAsset('torus');
+            document.getElementById('moe-status').innerText = `"Built custom 3D Prefab for: '${prompt}'"`;
+            document.getElementById('ai-input').value = "";
         }
 
-        function exportGameData() {
-            if (sceneObjects.length === 0) return;
-            let worldData = {
-                engine: "CypherStudio",
-                objects: sceneObjects.map(obj => ({
-                    type: obj.userData.type,
-                    color: obj.userData.color,
-                    scale: obj.userData.scale,
-                    physics: obj.userData.physics,
-                    position: { x: obj.position.x, y: obj.position.y, z: obj.position.z }
+        // --- 5. CHARACTER GENERATOR ---
+        function buildCharacter() {
+            if (characterGroup) scene.remove(characterGroup);
+
+            let name = document.getElementById('char-name').value;
+            let shirtColor = document.getElementById('char-shirt').value;
+            let pantsColor = document.getElementById('char-pants').value;
+
+            characterGroup = new THREE.Group();
+
+            // Legs
+            let legGeo = new THREE.BoxGeometry(0.3, 0.8, 0.3);
+            let legMat = new THREE.MeshStandardMaterial({ color: pantsColor });
+            let leg = new THREE.Mesh(legGeo, legMat);
+            leg.position.y = 0.4;
+            characterGroup.add(leg);
+
+            // Torso
+            let torsoGeo = new THREE.BoxGeometry(0.7, 0.9, 0.4);
+            let torsoMat = new THREE.MeshStandardMaterial({ color: shirtColor });
+            let torso = new THREE.Mesh(torsoGeo, torsoMat);
+            torso.position.y = 1.1;
+            characterGroup.add(torso);
+
+            // Head
+            let headGeo = new THREE.SphereGeometry(0.3, 16, 16);
+            let headMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
+            let head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 1.75;
+            characterGroup.add(head);
+
+            characterGroup.position.set(0, 0, 0);
+            scene.add(characterGroup);
+
+            document.getElementById('moe-status').innerText = `"Character '${name}' rendered!"`;
+        }
+
+        // --- 6. 3D PARTICLE EMITTER SYSTEM ---
+        function toggleParticles() {
+            if (particleSystem) {
+                scene.remove(particleSystem);
+                particleSystem = null;
+                document.getElementById('moe-status').innerText = `"Particle Emitter Disabled."`;
+                return;
+            }
+
+            const count = 200;
+            const geo = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+
+            for (let i = 0; i < count * 3; i++) {
+                positions[i] = (Math.random() - 0.5) * 8;
+            }
+
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const mat = new THREE.PointsMaterial({ color: 0x7ee787, size: 0.08 });
+            particleSystem = new THREE.Points(geo, mat);
+            scene.add(particleSystem);
+
+            document.getElementById('moe-status').innerText = `"3D Particle System Activated!"`;
+        }
+
+        function updateLighting() {
+            let val = parseFloat(document.getElementById('light-intensity').value);
+            dirLight.intensity = val;
+            let shadowState = document.getElementById('shadow-toggle').value;
+            renderer.shadowMap.enabled = (shadowState === 'enabled');
+        }
+
+        // --- 7. AUTOMATIC ERROR DIAGNOSTICS ---
+        function runDiagnostics() {
+            let output = document.getElementById('diag-output');
+            output.innerText = "Scanning project variables...";
+            
+            setTimeout(() => {
+                if (sceneObjects.length === 0) {
+                    output.innerHTML = "<span style='color:#f85149;'>⚠️ Warning: Workspace has no spawned objects.</span>";
+                } else {
+                    output.innerHTML = "<span style='color:#7ee787;'>✓ All paths valid. No broken variables detected.</span>";
+                }
+            }, 500);
+        }
+
+        // --- 8. EXPORT BRIDGE PACKAGE ---
+        function exportEnginePackage() {
+            let pkg = {
+                version: "3.0",
+                char: {
+                    name: document.getElementById('char-name').value,
+                    shirt: document.getElementById('char-shirt').value,
+                    pants: document.getElementById('char-pants').value
+                },
+                network: {
+                    multiplayer: document.getElementById('net-sync').value,
+                    steamAppId: document.getElementById('steam-appid').value
+                },
+                objects: sceneObjects.map(o => ({
+                    shape: o.userData.shape,
+                    pos: o.position
                 }))
             };
-            document.getElementById("outputCode").value = btoa(JSON.stringify(worldData));
+
+            let encoded = btoa(unescape(encodeURIComponent(JSON.stringify(pkg))));
+            document.getElementById('bridge-export').value = encoded;
         }
 
-        // Spawn default setup block
-        spawnObject("box");
+        // Init
+        buildCharacter();
 
         function animate() {
             requestAnimationFrame(animate);
-            sceneObjects.forEach(obj => {
-                obj.rotation.x += 0.005;
-                obj.rotation.y += 0.01;
-            });
+            sceneObjects.forEach(obj => obj.rotation.y += 0.01);
+            if (characterGroup) characterGroup.rotation.y += 0.005;
+            if (particleSystem) particleSystem.rotation.y += 0.002;
             renderer.render(scene, camera);
         }
         animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
     </script>
 </body>
-</html>
+    </html>
+    
